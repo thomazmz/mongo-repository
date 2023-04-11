@@ -1,5 +1,7 @@
 import { 
   Collection as MongodbCollection,
+  Document as MongodbDocument,
+  WithId as MongodbWithId,
 } from 'mongodb'
 
 import { 
@@ -24,6 +26,15 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
   public async get(query: Query<E>): Promise<E[]>
   public async get(getParameter?: unknown): Promise<E | E[]> {
     throw new Error('Method not implemented.')
+  }
+
+  protected convertDocumentToEntity(document: MongodbWithId<MongodbDocument>): E {
+    const { _id, ...object } = document
+    return { ...object, id: _id.toString() } as E
+  }
+  
+  protected convertDocumentsToEntities(documents: MongodbWithId<MongodbDocument>[]): E[] {
+    return documents.map(document => this.convertDocumentToEntity(document))
   }
 
   public async create(properties: EntityProperties<E>): Promise<E>
@@ -91,7 +102,8 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
   }
 
   public async getAll(): Promise<E[]> {
-    throw new Error('Method not implemented.')
+    const documents = await this.collection.find().toArray()
+    return this.convertDocumentsToEntities(documents)
   }
 
   public async getById(id: E['id']): Promise<E | undefined> {
