@@ -1,0 +1,112 @@
+
+version: 2.1
+
+save-cache: &save_cache
+  save_cache:
+    key: npm-packages-{{ checksum "package-lock.json" }}
+    paths:
+      - ~/.cache/npm
+
+restore-cache: &restore_cache
+  restore_cache:
+    keys:
+      - npm-packages-{{ checksum "package-lock.json" }}
+
+persist-directory-state: &persist-directory-state 
+  persist_to_workspace: 
+    root: /home/circleci
+    paths: project
+
+restore-directory-state: &restore-directory-state
+  attach_workspace:
+    at: /home/circleci
+
+filter-feature-branch: &filter-feature-branch
+  branches:
+    ignore: 
+      - main
+
+filter-main-branch: &filter-main-branch
+  branches:
+    only: /main/
+    ignore:
+      - /.*/
+
+executors:
+  node:
+    docker:
+      - image: cimg/node:${NODE_VERSION}
+      - image: mongo:6
+        environment: 
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: admin
+
+jobs:
+  checkout:
+    executor: node
+    steps:
+      - checkout
+      - <<: *restore_cache
+      - run:
+          name: "Install dependencies"
+          command: npm ci
+      - <<: *save_cache
+      - <<: *persist-directory-state
+  build:
+    executor: node
+    steps:
+      - <<: *restore-directory-state
+      - run:
+          name: "Build monorepo packages"
+          command: npm run build
+      - <<: *persist-directory-state
+  run-unit-tests:
+    executor: node
+    steps:
+      - <<: *restore-directory-state
+      - run:
+          name: "Run unit tests"
+          command: npm run test:unit
+  run-integration-tests:
+    executor: node
+    steps:
+      - <<: *restore-directory-state
+      - run:
+          name: "Run integration tests"
+          command: npm run test:integration
+
+workflows:
+  feature-branch-pipeline:
+    jobs:
+      - checkout:
+          filters: 
+            <<: *filter-feature-branch
+      - build:
+          name: build
+          requires:
+            - checkout
+      - run-unit-tests:
+          name: test
+          requires:
+            - build
+      - run-integration-tests:
+          name: test
+          requires:
+            - build
+  main-branch-pipeline:
+    jobs:
+      - checkout:
+          filters: 
+            <<: *filter-main-branch
+      - build:
+          name: build
+          requires:
+            - checkout
+      - run-unit-tests:
+          name: run-unit-tests
+          requires:
+            - build
+      - run-integration-tests:
+          name: run-integration-tests
+          requires:
+            - build
