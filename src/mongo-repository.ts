@@ -11,6 +11,7 @@ import {
   EntityProperties,
   EntityPropertiesPartial,
   Filter,
+  Identifier,
   Query,
   Repository,
   RepositoryError,
@@ -34,11 +35,19 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
     return { _id: this.createObjectIdFromIdentifier(id) }
   }
 
-  protected createObjectIdFromIdentifier(identifier: string): MongodbObjectId {
+  protected parseIdsAsDocumentFilter(ids: E['id'][]): MongodbFilter<MongodbDocument> {
+    return { _id: { $in: this.createObjectIdsFromIdentifiers(ids) }}
+  }
+
+  protected createObjectIdFromIdentifier(identifier: Identifier): MongodbObjectId {
     return new MongodbObjectId(identifier)
   }
 
-  protected isValidObjectId(idCandidate: string): boolean {
+  protected createObjectIdsFromIdentifiers(identifiers: Identifier[]): MongodbObjectId[] {
+    return identifiers.map(this.createObjectIdFromIdentifier)
+  }
+
+  protected isValidObjectId(idCandidate: Identifier): boolean {
     return MongodbObjectId.isValid(idCandidate)
   }
   
@@ -147,7 +156,19 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
   }
 
   public async getByIds(ids: E['id'][]): Promise<E[]> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      const validIds = ids.filter(this.isValidObjectId)
+
+      if(validIds.length === 0) {
+        return []
+      }
+
+      const mongoFilter = this.parseIdsAsDocumentFilter(ids)
+
+      const documents = await this.collection.find(mongoFilter).toArray()
+
+      return this.convertDocumentsToEntities(documents)
+    })
   }
 
   public async getByFilter(filter: Filter<E>): Promise<E[]> {

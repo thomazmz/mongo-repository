@@ -1,5 +1,6 @@
 import {
   Collection as MongodbCollection,
+  ObjectId as MongodbObjectId,
 } from 'mongodb'
 
 import { 
