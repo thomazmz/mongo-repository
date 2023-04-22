@@ -1,7 +1,12 @@
+import {
+  ObjectId as MongodbObjectId
+} from 'mongodb'
+
 import { EntityProperties } from '@thomazmz/core-context'
 import { MongoTestContext } from './mongo-repository-test-context'
 import { MongoTestEntity } from './mongo-repository-test-entity'
 import { MongoRepository } from '../src/mongo-repository'
+
 
 describe('MongoRepository', () => {
   const mongoTestContext = new MongoTestContext()
@@ -78,11 +83,11 @@ describe('MongoRepository', () => {
     it('should return all entities', async () => {
       await seedTestCollection()
 
-      const result = await mongoRepository.getAll()
+      const entities = await mongoRepository.getAll()
       
-      expect(result.length).toBe(6)
+      expect(entities.length).toBe(6)
 
-      expect(result).toEqual(expect.arrayContaining([
+      expect(entities).toEqual(expect.arrayContaining([
         expect.objectContaining({
           stringProperty: 'AAA',
           numberProperty: 123,
@@ -120,6 +125,39 @@ describe('MongoRepository', () => {
           booleanProperty: false,
         }),
       ]))
+    })
+  })
+
+  describe('getById', () => {
+    it('should return entities by id', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+
+      entities.forEach(async (entity) => {
+        const foundEntity = await mongoRepository.getById(entity.id)
+        expect(foundEntity).toEqual(entity)
+      })
+    })
+
+    it('should return undefined when the given id is invalid', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+
+      entities.forEach(async (entity) => {
+        const foundEntity = await mongoRepository.getById(`${entity.id}-invalid-id`)
+        expect(foundEntity).toEqual(undefined)
+      })
+    })
+
+    it('should return undefined when there is not an entity with the given id', async () => {
+      await seedTestCollection()
+
+      const invalidEntityId = new MongodbObjectId()
+
+      const foundEntity = await mongoRepository.getById(invalidEntityId.toString())
+      expect(foundEntity).toEqual(undefined)
     })
   })
 })

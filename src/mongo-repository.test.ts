@@ -25,4 +25,18 @@ describe('MongoRepository unit tests', () => {
       await expect(mongoRepository.getAll()).rejects.toThrowError(RepositoryError)
     })
   })
+
+  describe('getById method', () => {
+    it('should throw RepositoryError an error is internally thrown', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      
+      mongodbCollectionMock.find = function() {
+        throw new Error('Some mocked error')
+      }
+
+      const someId = (new MongodbObjectId()).toString()
+  
+      await expect(mongoRepository.getById(someId)).rejects.toThrowError(RepositoryError)
+    })
+  })
 })

@@ -1,10 +1,12 @@
 import { 
   Collection as MongodbCollection,
   Document as MongodbDocument,
+  ObjectId as MongodbObjectId,
   WithId as MongodbWithId,
+  Filter as MongodbFilter
 } from 'mongodb'
 
-import { 
+import {
   Entity,
   EntityProperties,
   EntityPropertiesPartial,
@@ -28,9 +30,21 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
     return documents.map(document => this.convertDocumentToEntity(document))
   }
 
-  protected async try<ReturnType extends any>(fn: () => Promise<ReturnType>): Promise<ReturnType> {
+  protected parseIdAsDocumentFilter(id: E['id']): MongodbFilter<MongodbDocument> {
+    return { _id: this.createObjectIdFromIdentifier(id) }
+  }
+
+  protected createObjectIdFromIdentifier(identifier: string): MongodbObjectId {
+    return new MongodbObjectId(identifier)
+  }
+
+  protected isValidObjectId(idCandidate: string): boolean {
+    return MongodbObjectId.isValid(idCandidate)
+  }
+  
+  protected async try<ReturnType extends any>(repositoryFunction: () => Promise<ReturnType>): Promise<ReturnType> {
     try {
-      return await fn()
+      return await repositoryFunction()
     } catch (error) {
       throw new RepositoryError()
     }
@@ -116,7 +130,20 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
   }
 
   public async getById(id: E['id']): Promise<E | undefined> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      if(!this.isValidObjectId(id)) {
+        return undefined
+      }
+
+      const mongoFilter = this.parseIdAsDocumentFilter(id)
+      const document = await this.collection.findOne(mongoFilter)
+  
+      if(!document) {
+        return undefined
+      }
+  
+      return this.convertDocumentToEntity(document)
+    })
   }
 
   public async getByIds(ids: E['id'][]): Promise<E[]> {
