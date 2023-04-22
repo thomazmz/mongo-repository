@@ -32,6 +32,14 @@ filter-main-branch: &filter-main-branch
     ignore:
       - /.*/
 
+filter-semver-tag: &filter-semver-tag
+  tags:
+    only:
+      - /^v\d+\.\d+\.\d+$/
+  branches:
+    ignore: 
+      - /.*/
+
 executors:
   node:
     docker:
@@ -74,6 +82,47 @@ jobs:
       - run:
           name: "Run integration tests"
           command: npm run test:integration
+  version:
+    executor: node
+    steps:
+      - <<: *restore-directory-state
+      - add_ssh_keys:
+            fingerprints:
+              - "fe:fb:38:f3:89:3c:de:7d:5c:87:b6:f8:bc:4d:14:f4"
+      - run: 
+          name: 'Add GitHub to known hosts'
+          command: ssh-keyscan github.com >> ~/.ssh/known_hosts
+      - run:
+          name: 'Configure GitHub Circle CI user'
+          command: |
+            git config user.email "circleci@mongo-repository.com"
+            git config user.name "circleci"
+      - run: 
+          name: 'Instal conventional-recommended-bump globally'
+          command: |
+            sudo npm install -g conventional-recommended-bump
+            sudo npm install -g conventional-changelog-angular
+      - run: 
+          name: 'Generate release version locally'
+          command: |
+            RELEASE_TYPE=$(conventional-recommended-bump -p angular)
+            echo "Next release type: $RELEASE_TYPE"
+            npm version $RELEASE_TYPE -m "chore(release): v%s [skip ci]"
+            VERSION=$(jq -r '.version' package.json)
+            echo "Created version: $VERSION"
+      - run: 
+          name: 'Push release version to github'
+          command: git push origin --follow-tags
+  publish:
+    executor: node
+    steps: 
+      - <<: *restore-directory-state
+      - run:
+          name: "Authenticate to NPM registry"
+          command: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > /home/circleci/.npmrc
+      - run:
+          name: "Publish Package to NPM registry"
+          command: npm publish --access public
 
 workflows:
   feature-branch-pipeline:
@@ -110,3 +159,25 @@ workflows:
           name: run-integration-tests
           requires:
             - build
+      - version:
+          name: version
+          requires:
+            - run-unit-tests
+            - run-integration-tests
+  semver-tag-pipeline: 
+    jobs:
+      - checkout:
+          filters: 
+            <<: *filter-semver-tag
+      - build:
+          name: build
+          requires:
+            - checkout
+          filters: 
+            <<: *filter-semver-tag
+      - publish:
+          name: publish
+          requires:
+            - build
+          filters: 
+            <<: *filter-semver-tag
