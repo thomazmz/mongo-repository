@@ -11,22 +11,13 @@ import {
   Filter,
   Query,
   Repository,
+  RepositoryError,
 } from '@thomazmz/core-context'
-
 
 export class MongoRepository<E extends Entity> implements Repository<E> {
   constructor(
     private readonly collection: MongodbCollection
   ) {}
-
-  public async get(): Promise<E[]>
-  public async get(id: E['id']): Promise<E>
-  public async get(ids: E['id'][]): Promise<E[]>
-  public async get(filter: Filter<E>): Promise<E[]>
-  public async get(query: Query<E>): Promise<E[]>
-  public async get(getParameter?: unknown): Promise<E | E[]> {
-    throw new Error('Method not implemented.')
-  }
 
   protected convertDocumentToEntity(document: MongodbWithId<MongodbDocument>): E {
     const { _id, ...object } = document
@@ -37,6 +28,22 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
     return documents.map(document => this.convertDocumentToEntity(document))
   }
 
+  protected async try<ReturnType extends any>(fn: () => Promise<ReturnType>): Promise<ReturnType> {
+    try {
+      return await fn()
+    } catch (error) {
+      throw new RepositoryError()
+    }
+  }
+
+  public async get(): Promise<E[]>
+  public async get(id: E['id']): Promise<E>
+  public async get(ids: E['id'][]): Promise<E[]>
+  public async get(filter: Filter<E>): Promise<E[]>
+  public async get(query: Query<E>): Promise<E[]>
+  public async get(getParameter?: unknown): Promise<E | E[]> {
+    throw new Error('Method not implemented.')
+  }
   public async create(properties: EntityProperties<E>): Promise<E>
   public async create(properties: EntityProperties<E>[]): Promise<E[]>
   public async create(createParameter: unknown): Promise<E | E[]> {
@@ -102,8 +109,10 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
   }
 
   public async getAll(): Promise<E[]> {
-    const documents = await this.collection.find().toArray()
-    return this.convertDocumentsToEntities(documents)
+    return this.try(async () => {
+      const documents = await this.collection.find().toArray()
+      return this.convertDocumentsToEntities(documents)
+    })
   }
 
   public async getById(id: E['id']): Promise<E | undefined> {
