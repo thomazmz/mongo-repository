@@ -58,4 +58,18 @@ describe('MongoRepository unit tests', () => {
       ])).rejects.toThrowError(RepositoryError)
     })
   })
+
+  describe('deleteById', () => {
+    it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      
+      mongodbCollectionMock.deleteOne = function() {
+        throw new Error('Some mocked error')
+      }
+
+      const someId = (new MongodbObjectId()).toString()
+  
+      await expect(mongoRepository.deleteById(someId)).rejects.toThrowError(RepositoryError)
+    })
+  })
 })

@@ -143,9 +143,9 @@ describe('MongoRepository', () => {
     it('should return undefined when the given id is invalid', async () => {
       await seedTestCollection()
 
-      const qwe = await mongoRepository.getById('some-invalid-entity-id')
+      const entity = await mongoRepository.getById('some-invalid-entity-id')
 
-      expect(qwe).toEqual(undefined)
+      expect(entity).toEqual(undefined)
     })
 
     it('should return undefined when there is not an entity with the given id', async () => {
@@ -153,11 +153,9 @@ describe('MongoRepository', () => {
 
       const unexistentEntityId = new MongodbObjectId()
 
-      const asd = await mongoRepository.getById(unexistentEntityId.toString())
+      const entity = await mongoRepository.getById(unexistentEntityId.toString())
 
-      console.log('here', asd)
-
-      expect(asd).toBe(undefined)
+      expect(entity).toBe(undefined)
     })
   })
 
@@ -187,6 +185,41 @@ describe('MongoRepository', () => {
         foundEntities[0],
         foundEntities[1],
       ]))
+    })
+  })
+
+  describe('deleteById', () => {
+    it('should delete element by id', async () => {
+      await seedTestCollection()
+      const entities = await mongoRepository.getAll()
+
+      for (const entity of entities) {
+        await mongoRepository.deleteById(entity.id)
+        const remainingEntities = await mongoRepository.getAll()
+
+        expect(remainingEntities.every((remainingEntity) => {
+          return remainingEntity.id !==  entity.id
+        })).toEqual(true)
+      }
+    })
+
+    it('should accept an invalid id without throwing an error', async () => {
+      await seedTestCollection()
+
+      const entity = await mongoRepository.deleteById('some-invalid-entity-id')
+
+      expect(entity).toEqual(undefined)
+    })
+
+    it('should accept an unmatching id without throwing an error', async () => {
+      await seedTestCollection()
+
+      const unexistentEntityId = new MongodbObjectId()
+
+      const entity = await mongoRepository.deleteById(unexistentEntityId.toString())
+
+      expect(entity).toBe(undefined)
+
     })
   })
 })

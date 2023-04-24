@@ -120,7 +120,14 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
   }
 
   public async deleteById(id: E['id']): Promise<void> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      if(!this.isValidObjectId(id)) {
+        return
+      }
+  
+      const mongoFilter = this.parseIdAsDocumentFilter(id)
+      await this.collection.deleteOne(mongoFilter)
+    })
   }
 
   public async deleteByIds(ids: E['id'][]): Promise<void> {
