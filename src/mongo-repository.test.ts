@@ -16,7 +16,7 @@ describe('MongoRepository unit tests', () => {
   const mongodbCollectionMock: MongodbCollection = {} as MongodbCollection
 
   describe('getAll method', () => {
-    it('should throw RepositoryError an error is internally thrown', async () => {
+    it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
       const mongoRepository = new MongoRepository(mongodbCollectionMock)
       
       mongodbCollectionMock.find = function() {
@@ -28,7 +28,21 @@ describe('MongoRepository unit tests', () => {
   })
 
   describe('getById method', () => {
-    it('should throw RepositoryError an error is internally thrown', async () => {
+    it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      
+      mongodbCollectionMock.findOne = function() {
+        throw new Error('Some mocked error')
+      }
+
+      const someId = (new MongodbObjectId()).toString()
+  
+      await expect(mongoRepository.getById(someId)).rejects.toThrowError(RepositoryError)
+    })
+  })
+
+  describe('getByIds', () => {
+    it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
       const mongoRepository = new MongoRepository(mongodbCollectionMock)
       
       mongodbCollectionMock.find = function() {
@@ -36,8 +50,12 @@ describe('MongoRepository unit tests', () => {
       }
 
       const someId = (new MongodbObjectId()).toString()
+      const anotherId = (new MongodbObjectId()).toString()
   
-      await expect(mongoRepository.getById(someId)).rejects.toThrowError(RepositoryError)
+      await expect(mongoRepository.getByIds([
+        someId,
+        anotherId,
+      ])).rejects.toThrowError(RepositoryError)
     })
   })
 })
