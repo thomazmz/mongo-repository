@@ -50,7 +50,7 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
   protected isValidObjectId(idCandidate: Identifier): boolean {
     return MongodbObjectId.isValid(idCandidate)
   }
-  
+
   protected async try<ReturnType extends any>(repositoryFunction: () => Promise<ReturnType>): Promise<ReturnType> {
     try {
       return await repositoryFunction()
@@ -131,7 +131,17 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
   }
 
   public async deleteByIds(ids: E['id'][]): Promise<void> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      const validIds = ids.filter(this.isValidObjectId)
+
+      if(validIds.length === 0) {
+        return
+      }
+
+      const mongoFilter = this.parseIdsAsDocumentFilter(ids)
+
+      await this.collection.deleteMany(mongoFilter)
+    })
   }
 
   public async deleteByFilter(filter: Filter<E>): Promise<void> {

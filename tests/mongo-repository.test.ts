@@ -171,19 +171,21 @@ describe('MongoRepository', () => {
       expect(foundEntities).toEqual([])
     })
 
-    it('should return array with of entities that match give ids', async () => {
+    it('should return array with entities that match give ids', async () => {
       await seedTestCollection()
 
       const entities = await mongoRepository.getAll()
+      const firstEntityId = entities[0].id
+      const secondEntityId = entities[1].id
 
       const foundEntities = await mongoRepository.getByIds([
-        entities[0].id,
-        entities[1].id,
+        firstEntityId,
+        secondEntityId,
       ])
 
       expect(foundEntities).toEqual(expect.arrayContaining([
-        foundEntities[0],
-        foundEntities[1],
+        entities[0],
+        entities[1],
       ]))
     })
   })
@@ -219,7 +221,39 @@ describe('MongoRepository', () => {
       const entity = await mongoRepository.deleteById(unexistentEntityId.toString())
 
       expect(entity).toBe(undefined)
+    })
+  })
 
+  describe('deleteByIds', () => {
+
+    it('should accept an invalid ids without throwing an error', async () => {
+      await seedTestCollection()
+
+      const entity = await mongoRepository.deleteByIds([
+        'another-invalid-entity-id',
+        'some-invalid-entity-id',
+      ])
+
+      expect(entity).toEqual(undefined)
+    })
+
+    it('should delete elements by ids', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+      const firstEntityId = entities[0].id
+      const secondEntityId = entities[1].id
+
+      await mongoRepository.deleteByIds([
+        firstEntityId,
+        secondEntityId,
+      ])
+
+      const remainingEntities = await mongoRepository.getAll()
+
+      expect(remainingEntities.every(({ id }) => {
+        return id !==  firstEntityId && id !== secondEntityId
+      })).toEqual(true)
     })
   })
 })
