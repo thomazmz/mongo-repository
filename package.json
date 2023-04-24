@@ -19,6 +19,7 @@
   },
   "scripts": {
     "build": "rimraf ./lib/* && tsc",
+    "test": "jest --config ./jest.json --passWithNoTests",
     "test:unit": "jest --config ./jest.json --passWithNoTests --testPathPattern=src",
     "test:integration": "jest --config ./jest.json --passWithNoTests --run-in-band --testPathPattern=tests"
   },
