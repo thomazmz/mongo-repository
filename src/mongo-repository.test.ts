@@ -3,13 +3,8 @@ import {
   ObjectId as MongodbObjectId,
 } from 'mongodb'
 
-import { 
-  MongoRepository
-} from './mongo-repository'
-
-import {
-  RepositoryError
-} from '@thomazmz/core-context'
+import { MongoRepository } from './mongo-repository'
+import { RepositoryError } from '@thomazmz/core-context'
 
 
 describe('MongoRepository unit tests', () => {
@@ -79,7 +74,7 @@ describe('MongoRepository unit tests', () => {
       
       mongodbCollectionMock.deleteMany = function() {
         throw new Error('Some mocked error')
-      }
+      } 
 
       const someId = (new MongodbObjectId()).toString()
       const anotherId = (new MongodbObjectId()).toString()
@@ -88,6 +83,20 @@ describe('MongoRepository unit tests', () => {
         someId,
         anotherId,
       ])).rejects.toThrowError(RepositoryError)
+    })
+  })
+
+  describe('updateById', () => {
+    it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      
+      mongodbCollectionMock.updateOne = function() {
+        throw new Error('Some mocked error')
+      }
+
+      const someId = (new MongodbObjectId()).toString()
+  
+      await expect(mongoRepository.updateById(someId, {})).rejects.toThrowError(RepositoryError)
     })
   })
 })

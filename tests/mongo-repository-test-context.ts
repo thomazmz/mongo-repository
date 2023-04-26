@@ -1,7 +1,9 @@
 import { 
   MongoClient,
+  Document as MongoDocument,
   Collection as MongoCollection,
   Db  as MongoDatabase,
+
 } from 'mongodb'
 
 export class MongoTestContext {
@@ -32,7 +34,7 @@ export class MongoTestContext {
   async seedTestCollectionDocuments(entities: any[]) {
     return this.collection.insertMany(entities)
   }
-  async fetchTestCollectionDocuments(): Promise<any[]> {
+  async fetchTestCollectionDocuments(): Promise<MongoDocument[]> {
     return this.collection.find().toArray()
   }
 }

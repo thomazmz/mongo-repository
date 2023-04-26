@@ -108,7 +108,29 @@ export class MongoRepository<E extends Entity> implements Repository<E> {
   }
 
   public async updateById(id: E['id'], properties: Partial<EntityProperties<E>>): Promise<E> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      const mongoFilter = this.parseIdAsDocumentFilter(id)
+
+      const propertiesToUpdate = {
+        $set: properties
+      } as const
+
+      const mongodbUpdateOptions = {
+        returnDocument: 'after'
+      } as const
+
+      const { value: document } = await this.collection.findOneAndUpdate(
+        mongoFilter, 
+        propertiesToUpdate, 
+        mongodbUpdateOptions,
+      )
+
+      if(!document) {
+        throw new RepositoryError(`Could not update entity. Could not find a entity with id ${id}.`)
+      }
+
+      return this.convertDocumentToEntity(document)
+    })
   }
 
   public async updateByIds(ids: E['id'][], properties: EntityPropertiesPartial<E>): Promise<E[]> {

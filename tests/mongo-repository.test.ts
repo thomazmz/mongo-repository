@@ -225,7 +225,6 @@ describe('MongoRepository', () => {
   })
 
   describe('deleteByIds', () => {
-
     it('should accept an invalid ids without throwing an error', async () => {
       await seedTestCollection()
 
@@ -254,6 +253,47 @@ describe('MongoRepository', () => {
       expect(remainingEntities.every(({ id }) => {
         return id !==  firstEntityId && id !== secondEntityId
       })).toEqual(true)
+    })
+  })
+
+  describe('updateById', () => {
+    it('should update entity', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+      const someEntityId = entities[0].id
+
+      const updatedEntity = await mongoRepository.updateById(someEntityId, {
+        stringProperty: 'ABC',
+        numberProperty: 321,
+        dateProperty: new Date(1000),
+        booleanProperty: false,
+      })
+
+      expect(updatedEntity.id).toEqual(someEntityId,)
+      expect(updatedEntity.stringProperty).toEqual('ABC')
+      expect(updatedEntity.numberProperty).toEqual(321)
+      expect(updatedEntity.dateProperty).toEqual(new Date(1000))
+      expect(updatedEntity.booleanProperty).toEqual(false)
+    })
+
+    it('should partially update entity', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+      const someEntity = entities[0]
+      const someEntityId = someEntity.id
+
+      const updatedEntity = await mongoRepository.updateById(someEntityId, {
+        stringProperty: 'ABC',
+        numberProperty: 321,
+      })
+
+      expect(updatedEntity.id).toEqual(someEntityId,)
+      expect(updatedEntity.stringProperty).toEqual('ABC')
+      expect(updatedEntity.numberProperty).toEqual(321)
+      expect(updatedEntity.dateProperty).toEqual(someEntity.dateProperty)
+      expect(updatedEntity.booleanProperty).toEqual(someEntity.booleanProperty)
     })
   })
 })
