@@ -1,7 +1,7 @@
 {
   "name": "@thomazmz/mongo-repository",
   "license": "ISC",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": "Thomaz Zandonotto <thomaz.zandonotto@gmail.com>",
   "description": "Repository implementation for MongoDB",
   "main": "lib/index.js",
