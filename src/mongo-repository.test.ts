@@ -90,7 +90,21 @@ describe('MongoRepository unit tests', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
       const mongoRepository = new MongoRepository(mongodbCollectionMock)
       
-      mongodbCollectionMock.updateOne = function() {
+      mongodbCollectionMock.findOneAndUpdate = function() {
+        throw new Error('Some mocked error')
+      }
+
+      const someId = (new MongodbObjectId()).toString()
+  
+      await expect(mongoRepository.updateById(someId, {})).rejects.toThrowError(RepositoryError)
+    })
+  })
+
+  describe('updateByIds', () => {
+    it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      
+      mongodbCollectionMock.updateMany = function() {
         throw new Error('Some mocked error')
       }
 

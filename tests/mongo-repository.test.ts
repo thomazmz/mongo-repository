@@ -257,7 +257,30 @@ describe('MongoRepository', () => {
   })
 
   describe('updateById', () => {
+
     it('should update entity', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+      const someEntityId = entities[0].id
+
+      await mongoRepository.updateById(someEntityId, {
+        stringProperty: 'ABC',
+        numberProperty: 321,
+        dateProperty: new Date(1000),
+        booleanProperty: false,
+      })
+
+      const updatedEntity = await mongoRepository.getById(someEntityId)
+
+      expect(updatedEntity?.id).toEqual(someEntityId,)
+      expect(updatedEntity?.stringProperty).toEqual('ABC')
+      expect(updatedEntity?.numberProperty).toEqual(321)
+      expect(updatedEntity?.dateProperty).toEqual(new Date(1000))
+      expect(updatedEntity?.booleanProperty).toEqual(false)
+    })
+
+    it('should return updated entity', async () => {
       await seedTestCollection()
 
       const entities = await mongoRepository.getAll()
@@ -294,6 +317,109 @@ describe('MongoRepository', () => {
       expect(updatedEntity.numberProperty).toEqual(321)
       expect(updatedEntity.dateProperty).toEqual(someEntity.dateProperty)
       expect(updatedEntity.booleanProperty).toEqual(someEntity.booleanProperty)
+    })
+  })
+
+  describe('updateByIds', () => {
+
+    it('should update entities', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+      const someEntityId = entities[0].id
+      const anotherEntityId = entities[1].id
+
+      await mongoRepository.updateByIds([
+        someEntityId,
+        anotherEntityId,
+      ], {
+        stringProperty: 'ABC',
+        numberProperty: 321,
+        dateProperty: new Date(1000),
+        booleanProperty: false,
+      })
+
+      const updatedEntities = await mongoRepository.getByIds([
+        someEntityId,
+        anotherEntityId,
+      ])
+
+      const someUpdatedEntity = updatedEntities.find(e => e.id = someEntityId)
+
+      expect(someUpdatedEntity?.id).toEqual(someEntityId)
+      expect(someUpdatedEntity?.stringProperty).toEqual('ABC')
+      expect(someUpdatedEntity?.numberProperty).toEqual(321)
+      expect(someUpdatedEntity?.dateProperty).toEqual(new Date(1000))
+      expect(someUpdatedEntity?.booleanProperty).toEqual(false)
+
+      const anotherUpdatedEntity = updatedEntities.find(e => e.id = anotherEntityId)
+
+      expect(anotherUpdatedEntity?.id).toEqual(anotherEntityId)
+      expect(anotherUpdatedEntity?.stringProperty).toEqual('ABC')
+      expect(anotherUpdatedEntity?.numberProperty).toEqual(321)
+      expect(anotherUpdatedEntity?.dateProperty).toEqual(new Date(1000))
+      expect(anotherUpdatedEntity?.booleanProperty).toEqual(false)
+    })
+
+    it('should return updated entities', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+      const someEntityId = entities[0].id
+      const anotherEntityId = entities[1].id
+
+      const updatedEntities = await mongoRepository.updateByIds([
+        someEntityId,
+        anotherEntityId,
+      ], {
+        stringProperty: 'ABC',
+        numberProperty: 321,
+        dateProperty: new Date(1000),
+        booleanProperty: false,
+      })
+
+      expect(updatedEntities[0].id).toEqual(someEntityId,)
+      expect(updatedEntities[0].stringProperty).toEqual('ABC')
+      expect(updatedEntities[0].numberProperty).toEqual(321)
+      expect(updatedEntities[0].dateProperty).toEqual(new Date(1000))
+      expect(updatedEntities[0].booleanProperty).toEqual(false)
+
+      expect(updatedEntities[1].id).toEqual(anotherEntityId)
+      expect(updatedEntities[1].stringProperty).toEqual('ABC')
+      expect(updatedEntities[1].numberProperty).toEqual(321)
+      expect(updatedEntities[1].dateProperty).toEqual(new Date(1000))
+      expect(updatedEntities[1].booleanProperty).toEqual(false)
+    })
+
+    it('should partially update entities', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+      const someEntityId = entities[0].id
+      const anotherEntityId = entities[1].id
+
+      await mongoRepository.updateByIds([
+        someEntityId,
+        anotherEntityId,
+      ], {
+        stringProperty: 'ABC',
+        numberProperty: 321,
+      })
+
+      const someUpdatedEntity = await mongoRepository.getById(someEntityId)
+      const anotherUpdatedEntity = await mongoRepository.getById(anotherEntityId)
+
+      expect(someUpdatedEntity?.id).toEqual(someEntityId)
+      expect(someUpdatedEntity?.stringProperty).toEqual('ABC')
+      expect(someUpdatedEntity?.numberProperty).toEqual(321)
+      expect(someUpdatedEntity?.dateProperty).toEqual(entities[0]?.dateProperty)
+      expect(someUpdatedEntity?.booleanProperty).toEqual(entities[0]?.booleanProperty)
+
+      expect(anotherUpdatedEntity?.id).toEqual(anotherEntityId)
+      expect(anotherUpdatedEntity?.stringProperty).toEqual('ABC')
+      expect(anotherUpdatedEntity?.numberProperty).toEqual(321)
+      expect(anotherUpdatedEntity?.dateProperty).toEqual(entities[1]?.dateProperty)
+      expect(anotherUpdatedEntity?.booleanProperty).toEqual(entities[1]?.booleanProperty)
     })
   })
 })
