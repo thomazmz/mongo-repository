@@ -113,4 +113,16 @@ describe('MongoRepository unit tests', () => {
       await expect(mongoRepository.updateById(someId, {})).rejects.toThrowError(RepositoryError)
     })
   })
+
+  describe('createOne', () => {
+    it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      
+      mongodbCollectionMock.insertOne = function() {
+        throw new Error('Some mocked error')
+      }
+  
+      await expect(mongoRepository.createOne({})).rejects.toThrowError(RepositoryError)
+    })
+  })
 })

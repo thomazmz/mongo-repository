@@ -3,7 +3,7 @@ import {
   Document as MongodbDocument,
   ObjectId as MongodbObjectId,
   WithId as MongodbWithId,
-  Filter as MongodbFilter
+  Filter as MongodbFilter,
 } from 'mongodb'
 
 import {
@@ -15,7 +15,7 @@ import {
   Query,
   Repository,
   RepositoryError,
-  ValueObject
+  ValueObject,
 } from '@thomazmz/core-context'
 
 export class MongoRepository<E extends Entity<any>> implements Repository<E> {
@@ -52,10 +52,14 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
     return MongodbObjectId.isValid(idCandidate)
   }
 
-  private async try<ReturnType>(repositoryFunction: () => Promise<ReturnType>): Promise<ReturnType> {
+  private async try<ReturnType>(fn: () => Promise<ReturnType>): Promise<ReturnType> {
     try {
-      return await repositoryFunction()
+      return await fn()
     } catch (error) {
+      if(error instanceof RepositoryError) {
+        throw error
+      }
+      // TODO: improve error throwing
       throw new RepositoryError()
     }
   }
@@ -120,7 +124,21 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   }
 
   public async createOne(properties: EntityProperties<E>): Promise<E> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      const currentDate = new Date()
+  
+      const timestamps = {
+        createdAt: currentDate,
+        upadtedAt: currentDate,
+      } as const
+  
+      const { insertedId } = await this.collection.insertOne({
+        ...timestamps,
+        ...properties,
+      })
+  
+      return this.convertDocumentToEntity({ ...properties, ...timestamps, _id: insertedId })
+    })
   }
 
   public async createMany(properties: EntityProperties<E>[]): Promise<E[]> {
@@ -146,6 +164,7 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
       )
 
       if(!document) {
+        // TODO: improve error throwing
         throw new RepositoryError(`Could not update entity. Could not find a entity with id ${id}.`)
       }
 

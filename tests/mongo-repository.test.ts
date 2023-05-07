@@ -344,7 +344,7 @@ describe('MongoRepository', () => {
         anotherEntityId,
       ])
 
-      const someUpdatedEntity = updatedEntities.find(e => e.id = someEntityId)
+      const someUpdatedEntity = updatedEntities.find(e => e.id === someEntityId)
 
       expect(someUpdatedEntity?.id).toEqual(someEntityId)
       expect(someUpdatedEntity?.stringProperty).toEqual('ABC')
@@ -352,7 +352,7 @@ describe('MongoRepository', () => {
       expect(someUpdatedEntity?.dateProperty).toEqual(new Date(1000))
       expect(someUpdatedEntity?.booleanProperty).toEqual(false)
 
-      const anotherUpdatedEntity = updatedEntities.find(e => e.id = anotherEntityId)
+      const anotherUpdatedEntity = updatedEntities.find(e => e.id === anotherEntityId)
 
       expect(anotherUpdatedEntity?.id).toEqual(anotherEntityId)
       expect(anotherUpdatedEntity?.stringProperty).toEqual('ABC')
@@ -420,6 +420,23 @@ describe('MongoRepository', () => {
       expect(anotherUpdatedEntity?.numberProperty).toEqual(321)
       expect(anotherUpdatedEntity?.dateProperty).toEqual(entities[1]?.dateProperty)
       expect(anotherUpdatedEntity?.booleanProperty).toEqual(entities[1]?.booleanProperty)
+    })
+  })
+
+  describe('createOne', () => {
+    it('It should create one entity', async () => {
+      const entityProperties: EntityProperties<MongoTestEntity> = {
+        numberProperty:  1,
+        dateProperty: new Date(),
+        stringProperty:  'someString',
+        booleanProperty: true,
+      }
+
+      const createdEntity = await mongoRepository.createOne(entityProperties)
+
+      const foundEntity = await mongoRepository.getById(createdEntity.id)
+
+      expect(foundEntity).toEqual(createdEntity)
     })
   })
 })
