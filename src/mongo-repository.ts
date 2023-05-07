@@ -16,6 +16,7 @@ import {
   Repository,
   RepositoryError,
   ValueObject,
+  arrayUtils,
 } from '@thomazmz/core-context'
 
 export class MongoRepository<E extends Entity<any>> implements Repository<E> {
@@ -142,9 +143,42 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   }
 
   public async createMany(properties: EntityProperties<E>[]): Promise<E[]> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      const currentDate = new Date()
+  
+      const timestamps = {
+        createdAt: currentDate,
+        upadtedAt: currentDate,
+      } as const
+  
+      const timestampedProperties = properties.map((entityProperties) => ({
+        ...entityProperties, ...timestamps
+      }))
+  
+      const mongodInsertOptions = {
+        ordered: true
+      } as const
+  
+      const insertResponse = await this.collection.insertMany(
+        timestampedProperties,
+        mongodInsertOptions,
+      )
+  
+      const insertedIds = Object.values(insertResponse.insertedIds)
+  
+      return arrayUtils.zip(timestampedProperties, insertedIds, (documentWithoutId, objectId) => {
+        if(!documentWithoutId || !objectId) {
+          // TODO: improve error throwing
+          throw new RepositoryError()
+        }
+  
+        return this.convertDocumentToEntity({
+          ...documentWithoutId, _id: objectId
+        })
+      })
+    })
   }
-
+    
   public async updateById(id: E['id'], properties: Partial<EntityProperties<E>>): Promise<E> {
     return this.try(async () => {
       const mongoFilter = this.parseIdAsDocumentFilter(id)

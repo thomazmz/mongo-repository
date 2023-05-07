@@ -439,4 +439,31 @@ describe('MongoRepository', () => {
       expect(foundEntity).toEqual(createdEntity)
     })
   })
+
+  describe('createMany', () => {
+    it('It should create many entities', async () => {
+      const someEntityProperties: EntityProperties<MongoTestEntity> = {
+        numberProperty:  1,
+        dateProperty: new Date(0),
+        stringProperty:  'someString',
+        booleanProperty: true,
+      }
+
+      const anotherEntityProperties: EntityProperties<MongoTestEntity> = {
+        numberProperty:  2,
+        dateProperty: new Date(1),
+        stringProperty:  'anotherString',
+        booleanProperty: false,
+      }
+
+      const createdEntities = await mongoRepository.createMany([
+        someEntityProperties, 
+        anotherEntityProperties,
+      ])
+
+      const foundEntities = await mongoRepository.getByIds(createdEntities.map(entity => entity.id))
+
+      expect(foundEntities).toEqual(expect.arrayContaining(createdEntities))
+    })
+  })
 })
