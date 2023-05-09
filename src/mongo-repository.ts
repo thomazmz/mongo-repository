@@ -24,13 +24,8 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
     private readonly collection: MongodbCollection
   ) {}
 
-  protected convertDocumentToEntity(document: MongodbWithId<MongodbDocument>): E {
-    const { _id, ...object } = document
-    return { ...object, id: _id.toString() } as E
-  }
-  
-  protected convertDocumentsToEntities(documents: MongodbWithId<MongodbDocument>[]): E[] {
-    return documents.map(document => this.convertDocumentToEntity(document))
+  protected createObjectIdFromIdentifier(identifier: Identifier): MongodbObjectId {
+    return new MongodbObjectId(identifier)
   }
 
   protected parseIdAsDocumentFilter(id: E['id']): MongodbFilter<MongodbDocument> {
@@ -41,8 +36,23 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
     return { _id: { $in: this.createObjectIdsFromIdentifiers(ids) }}
   }
 
-  protected createObjectIdFromIdentifier(identifier: Identifier): MongodbObjectId {
-    return new MongodbObjectId(identifier)
+  protected parseEntityFilterAsDocumentFilter(entityFilter: Filter<E>): MongodbFilter<MongodbDocument> {
+    return Object.entries(entityFilter).reduce((filter, [key, value]) => {
+      return { ...filter, [key]: { $eq: value } }
+    }, {})
+  }
+
+  protected parseQuery(entityFilter: Query<E>): MongodbFilter<MongodbDocument> {
+    throw new Error('Method not implemented.')
+  }
+
+  protected convertDocumentToEntity(document: MongodbWithId<MongodbDocument>): E {
+    const { _id, ...object } = document
+    return { ...object, id: _id.toString() } as E
+  }
+  
+  protected convertDocumentsToEntities(documents: MongodbWithId<MongodbDocument>[]): E[] {
+    return documents.map(document => this.convertDocumentToEntity(document))
   }
 
   protected createObjectIdsFromIdentifiers(identifiers: Identifier[]): MongodbObjectId[] {
@@ -144,6 +154,11 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
 
   public async createMany(properties: EntityProperties<E>[]): Promise<E[]> {
     return this.try(async () => {
+
+      if(properties.length === 0) {
+        return []
+      }
+
       const currentDate = new Date()
   
       const timestamps = {
@@ -214,10 +229,7 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
         $set: this.resolveUpdateProperties(properties)
       } as const
 
-      await this.collection.updateMany(
-        mongoFilter,
-        propertiesToUpdate,
-      )
+      await this.collection.updateMany(mongoFilter, propertiesToUpdate)
 
       // TODO: Wrap collection calls into a transaction
       // TODO: Use find operation directly instead of calling getById
@@ -226,7 +238,11 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   }
 
   public async updateByFilter(filter: Filter<E>, properties: Partial<EntityProperties<E>>): Promise<E[]> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      const mongoFilter = this.parseEntityFilterAsDocumentFilter(filter)
+      await this.collection.updateMany(mongoFilter, properties)
+      return this.getByFilter(filter)
+    })
   }
 
   public async deleteById(id: E['id']): Promise<void> {
@@ -255,7 +271,10 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   }
 
   public async deleteByFilter(filter: Filter<E>): Promise<void> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      const mongoFilter = this.parseEntityFilterAsDocumentFilter(filter)
+      await this.collection.deleteMany(mongoFilter)
+    })
   }
 
   public async getAll(): Promise<E[]> {
@@ -299,10 +318,18 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   }
 
   public async getByFilter(filter: Filter<E>): Promise<E[]> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      const mongoFilter = this.parseEntityFilterAsDocumentFilter(filter)
+      const documents = await this.collection.find(mongoFilter).toArray()
+      return this.convertDocumentsToEntities(documents)
+    })
   }
 
   public async getByQuery(query: Query<E>): Promise<E[]> {
-    throw new Error('Method not implemented.')
+    return this.try(async () => {
+      const mongoFilter = this.parseQuery(query)
+      const documents = await this.collection.find(mongoFilter).toArray()
+      return this.convertDocumentsToEntities(documents)
+    })
   }
 }
