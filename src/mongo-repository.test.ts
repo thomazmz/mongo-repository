@@ -34,6 +34,16 @@ describe('MongoRepository unit tests', () => {
   
       await expect(mongoRepository.getById(someId)).rejects.toThrowError(RepositoryError)
     })
+
+    it('should return undefined when an invalid id is passed', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+
+      const someInvalidId = 'someInvalidId'
+
+      const result = await mongoRepository.getById(someInvalidId)
+  
+      expect(result).toEqual(undefined)
+    })
   })
 
   describe('getByIds', () => {
@@ -51,6 +61,20 @@ describe('MongoRepository unit tests', () => {
         someId,
         anotherId,
       ])).rejects.toThrowError(RepositoryError)
+    })
+
+    it('should return empty array when no valid ids are passed', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+
+      const someInvalidId = 'someInvalidId'
+      const anotherInvalidId = 'anotherInvalidId'
+
+      const result = await mongoRepository.getByIds([
+        someInvalidId,
+        anotherInvalidId,
+      ])
+  
+      expect(result).toEqual([])
     })
   })
 
@@ -126,13 +150,21 @@ describe('MongoRepository unit tests', () => {
     })
   })
 
-  it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-    const mongoRepository = new MongoRepository(mongodbCollectionMock)
-    
-    mongodbCollectionMock.insertOne = function() {
-      throw new Error('Some mocked error')
-    }
+  describe('createMany', () => {
+    it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      
+      mongodbCollectionMock.insertOne = function() {
+        throw new Error('Some mocked error')
+      }
+  
+      await expect(mongoRepository.createMany([{}])).rejects.toThrowError(RepositoryError)
+    })
+  })
 
-    await expect(mongoRepository.createOne({})).rejects.toThrowError(RepositoryError)
+  it('should return empty array when empty array is passed', async () => {
+    const mongoRepository = new MongoRepository(mongodbCollectionMock)
+    const result = await mongoRepository.createMany([])
+    expect(result).toEqual([])
   })
 })
