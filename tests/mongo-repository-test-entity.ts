@@ -6,4 +6,8 @@ export type MongoTestEntity = {
   readonly numberProperty: number,
   readonly stringProperty: string,
   readonly booleanProperty: boolean,
+  readonly optionalDateProperty?: Date,
+  readonly optionalNumberProperty?: number,
+  readonly optionalStringProperty?: string,
+  readonly optionalBooleanProperty?: boolean,
 }

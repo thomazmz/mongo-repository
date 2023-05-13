@@ -79,7 +79,7 @@ describe('MongoRepository', () => {
     ])
   }
 
-  describe('getAll', () => {
+  describe('getAll method', () => {
     it('should return all entities', async () => {
       await seedTestCollection()
 
@@ -318,6 +318,64 @@ describe('MongoRepository', () => {
       expect(updatedEntity.dateProperty).toEqual(someEntity.dateProperty)
       expect(updatedEntity.booleanProperty).toEqual(someEntity.booleanProperty)
     })
+
+    it('should unset entity properties', async () => {
+      await mongoTestContext.seedTestCollectionDocuments([{
+        stringProperty: 'AAA',
+        numberProperty: 123,
+        dateProperty: new Date(10),
+        booleanProperty: true,
+        optionalStringProperty: 'BBB',
+        optionalNumberProperty: 456,
+        optionalDateProperty: new Date(20),
+        optionalBooleanProperty: false,
+      }])
+
+      const entityCount = await mongoRepository.countAll()
+      
+      expect(entityCount).toBe(1)
+
+      const [ someEntity ] = await mongoRepository.getAll()
+      
+      expect(someEntity.stringProperty).toEqual('AAA')
+      expect(someEntity.numberProperty).toEqual(123)
+      expect(someEntity.dateProperty).toEqual(new Date(10))
+      expect(someEntity.booleanProperty).toEqual(true)
+      expect(someEntity.optionalStringProperty).toEqual('BBB')
+      expect(someEntity.optionalNumberProperty).toEqual(456)
+      expect(someEntity.optionalDateProperty).toEqual(new Date(20))
+      expect(someEntity.optionalBooleanProperty).toEqual(false)
+
+      const updateEntityResult = await mongoRepository.updateById(someEntity.id, {
+        optionalStringProperty: undefined,
+        optionalNumberProperty: undefined,
+        optionalDateProperty: undefined,
+        optionalBooleanProperty: undefined,
+      })
+
+      expect(updateEntityResult.id).toEqual(someEntity.id)
+      expect(updateEntityResult.stringProperty).toEqual(someEntity.stringProperty)
+      expect(updateEntityResult.numberProperty).toEqual(someEntity.numberProperty)
+      expect(updateEntityResult.dateProperty).toEqual(someEntity.dateProperty)
+      expect(updateEntityResult.booleanProperty).toEqual(someEntity.booleanProperty)
+      expect("optionalStringProperty" in updateEntityResult).toBe(false)
+      expect("optionalNumberProperty" in updateEntityResult).toBe(false)
+      expect("optionalDateProperty" in updateEntityResult).toBe(false)
+      expect("optionalBooleanProperty" in updateEntityResult).toBe(false)
+
+      const updatedEntity = await mongoRepository.getById(someEntity.id)
+
+      expect(updatedEntity).toBeDefined()
+      expect(updatedEntity?.id).toEqual(someEntity.id)
+      expect(updatedEntity?.stringProperty).toEqual(someEntity.stringProperty)
+      expect(updatedEntity?.numberProperty).toEqual(someEntity.numberProperty)
+      expect(updatedEntity?.dateProperty).toEqual(someEntity.dateProperty)
+      expect(updatedEntity?.booleanProperty).toEqual(someEntity.booleanProperty)
+      expect(updatedEntity && "optionalStringProperty" in updatedEntity).toBe(false)
+      expect(updatedEntity && "optionalNumberProperty" in updatedEntity).toBe(false)
+      expect(updatedEntity && "optionalDateProperty" in updatedEntity).toBe(false)
+      expect(updatedEntity && "optionalBooleanProperty" in updatedEntity).toBe(false)
+    })
   })
 
   describe('updateByIds', () => {
@@ -421,6 +479,114 @@ describe('MongoRepository', () => {
       expect(anotherUpdatedEntity?.dateProperty).toEqual(entities[1]?.dateProperty)
       expect(anotherUpdatedEntity?.booleanProperty).toEqual(entities[1]?.booleanProperty)
     })
+
+    it('should unset properties from many entities', async () => {
+      await mongoTestContext.seedTestCollectionDocuments([
+        {
+          stringProperty: 'AAA',
+          numberProperty: 12,
+          dateProperty: new Date(10),
+          booleanProperty: true,
+          optionalStringProperty: 'BBB',
+          optionalNumberProperty: 34,
+          optionalDateProperty: new Date(20),
+          optionalBooleanProperty: false,
+        },
+        {
+          stringProperty: 'AAA',
+          numberProperty: 12,
+          dateProperty: new Date(10),
+          booleanProperty: true,
+          optionalStringProperty: 'BBB',
+          optionalNumberProperty: 34,
+          optionalDateProperty: new Date(20),
+          optionalBooleanProperty: false,
+        }
+      ])
+
+      const entityCount = await mongoRepository.countAll()
+      
+      expect(entityCount).toBe(2)
+
+      const [ someEntity, anotherEntity ] = await mongoRepository.getAll()
+
+      expect(someEntity.stringProperty).toEqual('AAA')
+      expect(someEntity.numberProperty).toEqual(12)
+      expect(someEntity.dateProperty).toEqual(new Date(10))
+      expect(someEntity.booleanProperty).toEqual(true)
+      expect(someEntity.optionalStringProperty).toEqual('BBB')
+      expect(someEntity.optionalNumberProperty).toEqual(34)
+      expect(someEntity.optionalDateProperty).toEqual(new Date(20))
+      expect(someEntity.optionalBooleanProperty).toEqual(false)
+
+      expect(anotherEntity.stringProperty).toEqual('AAA')
+      expect(anotherEntity.numberProperty).toEqual(12)
+      expect(anotherEntity.dateProperty).toEqual(new Date(10))
+      expect(anotherEntity.booleanProperty).toEqual(true)
+      expect(anotherEntity.optionalStringProperty).toEqual('BBB')
+      expect(anotherEntity.optionalNumberProperty).toEqual(34)
+      expect(anotherEntity.optionalDateProperty).toEqual(new Date(20))
+      expect(anotherEntity.optionalBooleanProperty).toEqual(false)
+
+      const [ 
+        someEntityUpdateResult, 
+        anotherEntityUpdateResult
+      ] = await mongoRepository.updateByIds([
+        someEntity.id, 
+        anotherEntity.id,
+      ], {
+        optionalStringProperty: undefined,
+        optionalNumberProperty: undefined,
+        optionalDateProperty: undefined,
+        optionalBooleanProperty: undefined,
+      })
+
+      expect(someEntityUpdateResult?.stringProperty).toEqual('AAA')
+      expect(someEntityUpdateResult?.numberProperty).toEqual(12)
+      expect(someEntityUpdateResult?.dateProperty).toEqual(new Date(10))
+      expect(someEntityUpdateResult?.booleanProperty).toEqual(true)
+
+      expect(someEntityUpdateResult && "optionalStringProperty" in someEntityUpdateResult).toBe(false)
+      expect(someEntityUpdateResult && "optionalNumberProperty" in someEntityUpdateResult).toBe(false)
+      expect(someEntityUpdateResult && "optionalDateProperty" in someEntityUpdateResult).toBe(false)
+      expect(someEntityUpdateResult && "optionalBooleanProperty" in someEntityUpdateResult).toBe(false)
+
+      expect(anotherEntityUpdateResult?.stringProperty).toEqual('AAA')
+      expect(anotherEntityUpdateResult?.numberProperty).toEqual(12)
+      expect(anotherEntityUpdateResult?.dateProperty).toEqual(new Date(10))
+      expect(anotherEntityUpdateResult?.booleanProperty).toEqual(true)
+
+      expect(anotherEntityUpdateResult && "optionalStringProperty" in anotherEntityUpdateResult).toBe(false)
+      expect(anotherEntityUpdateResult && "optionalNumberProperty" in anotherEntityUpdateResult).toBe(false)
+      expect(anotherEntityUpdateResult && "optionalDateProperty" in anotherEntityUpdateResult).toBe(false)
+      expect(anotherEntityUpdateResult && "optionalBooleanProperty" in anotherEntityUpdateResult).toBe(false)
+
+
+      const [
+        someUpdatedEntity,
+        anotherUpdatedEntity 
+      ] = await mongoRepository.getAll()
+
+      expect(someUpdatedEntity?.stringProperty).toEqual('AAA')
+      expect(someUpdatedEntity?.numberProperty).toEqual(12)
+      expect(someUpdatedEntity?.dateProperty).toEqual(new Date(10))
+      expect(someUpdatedEntity?.booleanProperty).toEqual(true)
+
+      expect(someUpdatedEntity && "optionalStringProperty" in someUpdatedEntity).toBe(false)
+      expect(someUpdatedEntity && "optionalNumberProperty" in someUpdatedEntity).toBe(false)
+      expect(someUpdatedEntity && "optionalDateProperty" in someUpdatedEntity).toBe(false)
+      expect(someUpdatedEntity && "optionalBooleanProperty" in someUpdatedEntity).toBe(false)
+
+      expect(anotherUpdatedEntity?.stringProperty).toEqual('AAA')
+      expect(anotherUpdatedEntity?.numberProperty).toEqual(12)
+      expect(anotherUpdatedEntity?.dateProperty).toEqual(new Date(10))
+      expect(anotherUpdatedEntity?.booleanProperty).toEqual(true)
+
+      expect(anotherUpdatedEntity && "optionalStringProperty" in anotherUpdatedEntity).toBe(false)
+      expect(anotherUpdatedEntity && "optionalNumberProperty" in anotherUpdatedEntity).toBe(false)
+      expect(anotherUpdatedEntity && "optionalDateProperty" in anotherUpdatedEntity).toBe(false)
+      expect(anotherUpdatedEntity && "optionalBooleanProperty" in anotherUpdatedEntity).toBe(false)
+    })
   })
 
   describe('createOne', () => {
@@ -464,6 +630,17 @@ describe('MongoRepository', () => {
       const foundEntities = await mongoRepository.getByIds(createdEntities.map(entity => entity.id))
 
       expect(foundEntities).toEqual(expect.arrayContaining(createdEntities))
+    })
+  })
+
+  describe('countAll', () => {
+    it('should count all entities', async () => {
+      await seedTestCollection()
+
+      const entities = await mongoRepository.getAll()
+      const count = await mongoRepository.countAll()
+
+      expect(entities.length).toBe(count)
     })
   })
 })

@@ -1,141 +1,91 @@
-import { 
-  Collection as MongodbCollection,
-  Document as MongodbDocument,
-  ObjectId as MongodbObjectId,
-  WithId as MongodbWithId,
-  Filter as MongodbFilter,
+import {
+  Collection,
+  Document,
+  ObjectId,
+  WithId,
+  Filter,
 } from 'mongodb'
 
 import {
   Entity,
+  Identifier,
   EntityProperties,
   EntityPropertiesPartial,
-  Filter,
-  Identifier,
-  Query,
-  Repository,
   RepositoryError,
-  ValueObject,
   arrayUtils,
+  Repository,
 } from '@thomazmz/core-context'
 
 export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   constructor(
-    private readonly collection: MongodbCollection
+    private readonly collection: Collection
   ) {}
 
-  protected createObjectIdFromIdentifier(identifier: Identifier): MongodbObjectId {
-    return new MongodbObjectId(identifier)
-  }
-
-  protected parseIdAsDocumentFilter(id: E['id']): MongodbFilter<MongodbDocument> {
-    return { _id: this.createObjectIdFromIdentifier(id) }
-  }
-
-  protected parseIdsAsDocumentFilter(ids: E['id'][]): MongodbFilter<MongodbDocument> {
-    return { _id: { $in: this.createObjectIdsFromIdentifiers(ids) }}
-  }
-
-  protected parseEntityFilterAsDocumentFilter(entityFilter: Filter<E>): MongodbFilter<MongodbDocument> {
-    return Object.entries(entityFilter).reduce((filter, [key, value]) => {
-      return { ...filter, [key]: { $eq: value } }
-    }, {})
-  }
-
-  protected parseQuery(entityFilter: Query<E>): MongodbFilter<MongodbDocument> {
-    throw new Error('Method not implemented.')
-  }
-
-  protected convertDocumentToEntity(document: MongodbWithId<MongodbDocument>): E {
-    const { _id, ...object } = document
-    return { ...object, id: _id.toString() } as E
-  }
-  
-  protected convertDocumentsToEntities(documents: MongodbWithId<MongodbDocument>[]): E[] {
-    return documents.map(document => this.convertDocumentToEntity(document))
-  }
-
-  protected createObjectIdsFromIdentifiers(identifiers: Identifier[]): MongodbObjectId[] {
-    return identifiers.map(this.createObjectIdFromIdentifier)
-  }
-
-  protected isValidObjectId(idCandidate: Identifier): boolean {
-    return MongodbObjectId.isValid(idCandidate)
-  }
-
-  private async try<ReturnType>(fn: () => Promise<ReturnType>): Promise<ReturnType> {
-    try {
-      return await fn()
-    } catch (error) {
+  protected async executeRepositoryOperation<ReturnType>(asyncCallback: () => Promise<ReturnType>): Promise<ReturnType> {
+    return asyncCallback().catch(error => {
+      console.log(error)
       if(error instanceof RepositoryError) {
         throw error
       }
-      // TODO: improve error throwing
       throw new RepositoryError()
-    }
+    })
   }
 
-  private resolveUpdateProperties = (updateInput: Partial<EntityProperties<E>>): ValueObject => {
-    const { id, createdAt, updatedAt, ...updatableProperties } = updateInput as any
-    return { ...updatableProperties, updatedAt: new Date() } as ValueObject
+  protected convertDocumentsToEntities(documents: WithId<Document>[]): E[] {
+    return documents.map(document => this.convertDocumentToEntity(document))
   }
 
-  public async get(): Promise<E[]>
-
-  public async get(id: E['id']): Promise<E>
-
-  public async get(ids: E['id'][]): Promise<E[]>
-
-  public async get(filter: Filter<E>): Promise<E[]>
-
-  public async get(query: Query<E>): Promise<E[]>
-
-  public async get(getParameter?: unknown): Promise<E | E[]> {
-    throw new Error('Method not implemented.')
+  protected convertDocumentToEntity(document: WithId<Document>): E {
+    const { _id, ...object } = document
+    return { ...object, id: _id.toString() } as E
   }
 
-  public async create(properties: EntityProperties<E>): Promise<E>
-
-  public async create(properties: EntityProperties<E>[]): Promise<E[]>
-
-  public async create(createParameter: unknown): Promise<E | E[]> {
-    throw new Error('Method not implemented.')
+  protected convertIdentifiersToDocumentFilter(ids: E['id'][]): Filter<Document> {
+    return { _id: { $in: this.convertToObjectIds(ids) }}
   }
 
-  public async update(id: E['id'], properties: Partial<EntityProperties<E>>): Promise<E>
-
-  public async update(ids: E['id'][], properties: Partial<EntityProperties<E>>): Promise<E[]>
-
-  public async update(filter: Filter<E>, properties: Partial<EntityProperties<E>>): Promise<E[]>
-
-  public async update(updtedaParameter: unknown, properties: unknown): Promise<E | E[]> {
-    throw new Error('Method not implemented.')
+  protected convertIdentifierToDocumentFilter(id: E['id']): Filter<Document> {
+    return { _id: this.convertToObjectId(id) }
   }
 
-  public async delete(id: E['id']): Promise<void>
-
-  public async delete(ids: E['id'][]): Promise<void>
-
-  public async delete(filter: Filter<E>): Promise<void>
-
-  public async delete(deleteParameter: unknown): Promise<void> {
-    throw new Error('Method not implemented.')
+  protected convertToObjectId(identifier: Identifier): ObjectId {
+    return new ObjectId(identifier)
   }
 
-  public async count(filter?: Filter<E>): Promise<number> {
-    throw new Error('Method not implemented.')
+  protected convertToObjectIds(identifiers: Identifier[]): ObjectId[] {
+    return identifiers.map(this.convertToObjectId)
   }
 
-  public async countAll(): Promise<number> {
-    throw new Error('Method not implemented.')
+  protected filterValidIdentifiers(candidates: Identifier[]) : Identifier[] {
+    return candidates.filter(this.validIdentifier)
   }
 
-  public async countByFilter(filter: Filter<E>): Promise<number> {
-    throw new Error('Method not implemented.')
+  protected resolvePropertiesToSet(properties: EntityPropertiesPartial<E>) {
+    return Object.entries(properties).reduce((acc, [key, value]) => {
+      if(value === undefined || value === null) {
+        return acc
+      }
+
+      return { ...acc, [key]: value }
+    }, {})
+  }
+
+  protected resolvePropertiesToUnset(properties: EntityPropertiesPartial<E>) {
+    return Object.entries(properties).reduce((acc, [key, value]) => {
+      if(value !== undefined && value !== null) {
+        return acc
+      }
+
+      return { ...acc, [key]: "" }
+    }, {})
+  }
+
+  protected validIdentifier(identifier: Identifier) {
+    return ObjectId.isValid(identifier)
   }
 
   public async createOne(properties: EntityProperties<E>): Promise<E> {
-    return this.try(async () => {
+    return this.executeRepositoryOperation(async () => {
       const currentDate = new Date()
   
       const timestamps = {
@@ -153,7 +103,7 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   }
 
   public async createMany(properties: EntityProperties<E>[]): Promise<E[]> {
-    return this.try(async () => {
+    return this.executeRepositoryOperation(async () => {
 
       if(properties.length === 0) {
         return []
@@ -195,11 +145,12 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   }
     
   public async updateById(id: E['id'], properties: Partial<EntityProperties<E>>): Promise<E> {
-    return this.try(async () => {
-      const mongoFilter = this.parseIdAsDocumentFilter(id)
+    return this.executeRepositoryOperation(async () => {
+      const mongoDocumentFilter = this.convertIdentifierToDocumentFilter(id)
 
       const propertiesToUpdate = {
-        $set: this.resolveUpdateProperties(properties)
+        $set: this.resolvePropertiesToSet(properties),
+        $unset: this.resolvePropertiesToUnset(properties),
       } as const
 
       const mongodbUpdateOptions = {
@@ -207,8 +158,8 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
       } as const
 
       const { value: document } = await this.collection.findOneAndUpdate(
-        mongoFilter, 
-        propertiesToUpdate, 
+        mongoDocumentFilter,
+        propertiesToUpdate,
         mongodbUpdateOptions,
       )
 
@@ -222,14 +173,15 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   }
 
   public async updateByIds(ids: E['id'][], properties: EntityPropertiesPartial<E>): Promise<E[]> {
-    return this.try(async () => {
-      const mongoFilter = this.parseIdsAsDocumentFilter(ids)
+    return this.executeRepositoryOperation(async () => {
+      const mongoDocumentFilter = this.convertIdentifiersToDocumentFilter(ids)
 
       const propertiesToUpdate = {
-        $set: this.resolveUpdateProperties(properties)
+        $set: this.resolvePropertiesToSet(properties),
+        $unset: this.resolvePropertiesToUnset(properties),
       } as const
 
-      await this.collection.updateMany(mongoFilter, propertiesToUpdate)
+      await this.collection.updateMany(mongoDocumentFilter, propertiesToUpdate)
 
       // TODO: Wrap collection calls into a transaction
       // TODO: Use find operation directly instead of calling getById
@@ -237,60 +189,45 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
     })
   }
 
-  public async updateByFilter(filter: Filter<E>, properties: Partial<EntityProperties<E>>): Promise<E[]> {
-    return this.try(async () => {
-      const mongoFilter = this.parseEntityFilterAsDocumentFilter(filter)
-      await this.collection.updateMany(mongoFilter, properties)
-      return this.getByFilter(filter)
-    })
-  }
-
   public async deleteById(id: E['id']): Promise<void> {
-    return this.try(async () => {
-      if(!this.isValidObjectId(id)) {
+    return this.executeRepositoryOperation(async () => {
+      if(!this.validIdentifier(id)) {
         return
       }
   
-      const mongoFilter = this.parseIdAsDocumentFilter(id)
+      const mongoFilter = this.convertIdentifierToDocumentFilter(id)
       await this.collection.deleteOne(mongoFilter)
     })
   }
 
   public async deleteByIds(ids: E['id'][]): Promise<void> {
-    return this.try(async () => {
-      const validIds = ids.filter(this.isValidObjectId)
+    return this.executeRepositoryOperation(async () => {
+      const validObjectIds = this.filterValidIdentifiers(ids)
 
-      if(validIds.length === 0) {
+      if(validObjectIds.length === 0) {
         return
       }
 
-      const mongoFilter = this.parseIdsAsDocumentFilter(ids)
-
-      await this.collection.deleteMany(mongoFilter)
-    })
-  }
-
-  public async deleteByFilter(filter: Filter<E>): Promise<void> {
-    return this.try(async () => {
-      const mongoFilter = this.parseEntityFilterAsDocumentFilter(filter)
+      const mongoFilter = this.convertIdentifiersToDocumentFilter(ids)
+  
       await this.collection.deleteMany(mongoFilter)
     })
   }
 
   public async getAll(): Promise<E[]> {
-    return this.try(async () => {
+    return this.executeRepositoryOperation(async () => {
       const documents = await this.collection.find().toArray()
       return this.convertDocumentsToEntities(documents)
     })
   }
 
   public async getById(id: E['id']): Promise<E | undefined> {
-    return this.try(async () => {
-      if(!this.isValidObjectId(id)) {
+    return this.executeRepositoryOperation(async () => {
+      if(!this.validIdentifier(id)) {
         return undefined
       }
 
-      const mongoFilter = this.parseIdAsDocumentFilter(id)
+      const mongoFilter = this.convertIdentifierToDocumentFilter(id)
       const document = await this.collection.findOne(mongoFilter)
   
       if(!document) {
@@ -302,14 +239,14 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   }
 
   public async getByIds(ids: E['id'][]): Promise<E[]> {
-    return this.try(async () => {
-      const validIds = ids.filter(this.isValidObjectId)
+    return this.executeRepositoryOperation(async () => {
+      const validIds = ids.filter(this.validIdentifier)
 
       if(validIds.length === 0) {
         return []
       }
 
-      const mongoFilter = this.parseIdsAsDocumentFilter(ids)
+      const mongoFilter = this.convertIdentifiersToDocumentFilter(ids)
 
       const documents = await this.collection.find(mongoFilter).toArray()
 
@@ -317,19 +254,7 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
     })
   }
 
-  public async getByFilter(filter: Filter<E>): Promise<E[]> {
-    return this.try(async () => {
-      const mongoFilter = this.parseEntityFilterAsDocumentFilter(filter)
-      const documents = await this.collection.find(mongoFilter).toArray()
-      return this.convertDocumentsToEntities(documents)
-    })
-  }
-
-  public async getByQuery(query: Query<E>): Promise<E[]> {
-    return this.try(async () => {
-      const mongoFilter = this.parseQuery(query)
-      const documents = await this.collection.find(mongoFilter).toArray()
-      return this.convertDocumentsToEntities(documents)
-    })
+  countAll(): Promise<number> {
+    return this.collection.countDocuments()
   }
 }
