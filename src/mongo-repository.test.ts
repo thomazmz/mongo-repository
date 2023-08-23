@@ -110,6 +110,20 @@ describe('MongoRepository unit tests', () => {
     })
   })
 
+  describe('deleteByFilter', () => {
+    it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
+      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      
+      mongodbCollectionMock.deleteMany = function() {
+        throw new Error('Some mocked error')
+      }
+  
+      await expect(mongoRepository.deleteByFilter({
+        somePropertyKey: 'somePropertyValue'
+      })).rejects.toThrowError(RepositoryError)
+    })
+  })
+
   describe('updateById', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
       const mongoRepository = new MongoRepository(mongodbCollectionMock)
