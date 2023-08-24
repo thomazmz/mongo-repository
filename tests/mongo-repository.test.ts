@@ -11,7 +11,10 @@ import { MongoRepository } from '../src/mongo-repository'
 describe('MongoRepository', () => {
   const mongoTestContext = new MongoTestContext()
   
-  const mongoRepository = new MongoRepository<MongoTestEntity>(mongoTestContext.collection)
+  const mongoRepository = new MongoRepository<MongoTestEntity>(
+    mongoTestContext.database, 
+    mongoTestContext.testCollectionName
+  )
 
   beforeAll(async () => {
     await mongoTestContext.openConnection()

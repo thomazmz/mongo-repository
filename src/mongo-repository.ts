@@ -4,6 +4,7 @@ import {
   ObjectId,
   WithId,
   Filter,
+  Db,
 } from 'mongodb'
 
 import {
@@ -20,13 +21,14 @@ import {
 } from '@thomazmz/core-utils'
 
 export class MongoRepository<E extends Entity<any>> implements Repository<E> {
-  constructor(
-    private readonly collection: Collection
-  ) {}
+  protected readonly collection: Collection
+
+  constructor(db: Db, collectionName: string) {
+    this.collection = db.collection(collectionName)
+  }
 
   protected async executeRepositoryOperation<ReturnType>(asyncCallback: () => Promise<ReturnType>): Promise<ReturnType> {
     return asyncCallback().catch(error => {
-      console.log(error)
       if(error instanceof RepositoryError) {
         throw error
       }
@@ -118,7 +120,7 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
         createdAt: currentDate,
         upadtedAt: currentDate,
       } as const
-  
+
       const timestampedProperties = properties.map((entityProperties) => ({
         ...entityProperties, ...timestamps
       }))
@@ -146,7 +148,7 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
       })
     })
   }
-    
+
   public async updateById(id: E['id'], properties: Partial<EntityProperties<E>>): Promise<E> {
     return this.executeRepositoryOperation(async () => {
       const mongoDocumentFilter = this.convertIdentifierToDocumentFilter(id)

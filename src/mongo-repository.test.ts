@@ -1,4 +1,5 @@
 import {
+  Db,
   Collection as MongodbCollection,
   ObjectId as MongodbObjectId,
 } from 'mongodb'
@@ -8,11 +9,15 @@ import { RepositoryError } from '@thomazmz/core-context'
 
 
 describe('MongoRepository unit tests', () => {
-  const mongodbCollectionMock: MongodbCollection = {} as MongodbCollection
+  const mongodbCollectionMockName = 'someCollectionName'
+
+  const mongodbCollectionMock = {} as MongodbCollection
+
+  const mongodbMock = { collection() { return mongodbCollectionMock } } as unknown as Db
 
   describe('getAll method', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
       
       mongodbCollectionMock.find = function() {
         throw new Error('Some mocked error')
@@ -24,7 +29,7 @@ describe('MongoRepository unit tests', () => {
 
   describe('getById method', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
       
       mongodbCollectionMock.findOne = function() {
         throw new Error('Some mocked error')
@@ -36,7 +41,7 @@ describe('MongoRepository unit tests', () => {
     })
 
     it('should return undefined when an invalid id is passed', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
 
       const someInvalidId = 'someInvalidId'
 
@@ -48,7 +53,7 @@ describe('MongoRepository unit tests', () => {
 
   describe('getByIds', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
       
       mongodbCollectionMock.find = function() {
         throw new Error('Some mocked error')
@@ -64,7 +69,7 @@ describe('MongoRepository unit tests', () => {
     })
 
     it('should return empty array when no valid ids are passed', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
 
       const someInvalidId = 'someInvalidId'
       const anotherInvalidId = 'anotherInvalidId'
@@ -80,7 +85,7 @@ describe('MongoRepository unit tests', () => {
 
   describe('deleteById', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
       
       mongodbCollectionMock.deleteOne = function() {
         throw new Error('Some mocked error')
@@ -94,7 +99,7 @@ describe('MongoRepository unit tests', () => {
 
   describe('deleteByIds', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
       
       mongodbCollectionMock.deleteMany = function() {
         throw new Error('Some mocked error')
@@ -112,7 +117,7 @@ describe('MongoRepository unit tests', () => {
 
   describe('updateById', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
       
       mongodbCollectionMock.findOneAndUpdate = function() {
         throw new Error('Some mocked error')
@@ -126,7 +131,7 @@ describe('MongoRepository unit tests', () => {
 
   describe('updateByIds', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
       
       mongodbCollectionMock.updateMany = function() {
         throw new Error('Some mocked error')
@@ -140,7 +145,7 @@ describe('MongoRepository unit tests', () => {
 
   describe('createOne', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
       
       mongodbCollectionMock.insertOne = function() {
         throw new Error('Some mocked error')
@@ -152,7 +157,7 @@ describe('MongoRepository unit tests', () => {
 
   describe('createMany', () => {
     it('should throw ReopsitoryError when an error is thrown by the mongodb collection', async () => {
-      const mongoRepository = new MongoRepository(mongodbCollectionMock)
+      const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
       
       mongodbCollectionMock.insertOne = function() {
         throw new Error('Some mocked error')
@@ -163,7 +168,7 @@ describe('MongoRepository unit tests', () => {
   })
 
   it('should return empty array when empty array is passed', async () => {
-    const mongoRepository = new MongoRepository(mongodbCollectionMock)
+    const mongoRepository = new MongoRepository(mongodbMock, mongodbCollectionMockName)
     const result = await mongoRepository.createMany([])
     expect(result).toEqual([])
   })
