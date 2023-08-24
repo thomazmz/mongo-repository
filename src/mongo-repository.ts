@@ -12,6 +12,7 @@ import {
   Identifier,
   EntityProperties,
   EntityPropertiesPartial,
+  EntityPropertiesToUpdate,
   RepositoryError,
   Repository,
 } from '@thomazmz/core-context'
@@ -65,7 +66,15 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
     return candidates.filter(this.validIdentifier)
   }
 
-  protected resolvePropertiesToSet(properties: EntityPropertiesPartial<E>) {
+  protected resolvePropertiesToUpdate(properties: EntityPropertiesToUpdate<E>) {
+    const currentDate = new Date()
+    return {
+      $unset: { ...this.resolvePropertiesToUnset(properties) },
+      $set: { ...this.resolvePropertiesToSet(properties), updatedAt: currentDate },
+    }
+  }
+
+  protected resolvePropertiesToSet(properties: EntityPropertiesToUpdate<E>) {
     return Object.entries(properties).reduce((acc, [key, value]) => {
       if(value === undefined || value === null) {
         return acc
@@ -75,13 +84,13 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
     }, {})
   }
 
-  protected resolvePropertiesToUnset(properties: EntityPropertiesPartial<E>) {
+  protected resolvePropertiesToUnset(properties: EntityPropertiesToUpdate<E>) {
     return Object.entries(properties).reduce((acc, [key, value]) => {
       if(value !== undefined && value !== null) {
         return acc
       }
 
-      return { ...acc, [key]: "" }
+      return { ...acc, [key]: '' }
     }, {})
   }
 
@@ -149,14 +158,11 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
     })
   }
 
-  public async updateById(id: E['id'], properties: Partial<EntityProperties<E>>): Promise<E> {
+  public async updateById(id: E['id'], properties: EntityPropertiesToUpdate<E>): Promise<E> {
     return this.executeRepositoryOperation(async () => {
       const mongoDocumentFilter = this.convertIdentifierToDocumentFilter(id)
 
-      const propertiesToUpdate = {
-        $set: this.resolvePropertiesToSet(properties),
-        $unset: this.resolvePropertiesToUnset(properties),
-      } as const
+      const propertiesToUpdate = this.resolvePropertiesToUpdate(properties)
 
       const mongodbUpdateOptions = {
         returnDocument: 'after'
@@ -177,14 +183,11 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
     })
   }
 
-  public async updateByIds(ids: E['id'][], properties: EntityPropertiesPartial<E>): Promise<E[]> {
+  public async updateByIds(ids: E['id'][], properties: EntityPropertiesToUpdate<E>): Promise<E[]> {
     return this.executeRepositoryOperation(async () => {
       const mongoDocumentFilter = this.convertIdentifiersToDocumentFilter(ids)
 
-      const propertiesToUpdate = {
-        $set: this.resolvePropertiesToSet(properties),
-        $unset: this.resolvePropertiesToUnset(properties),
-      } as const
+      const propertiesToUpdate = this.resolvePropertiesToUpdate(properties)
 
       await this.collection.updateMany(mongoDocumentFilter, propertiesToUpdate)
 

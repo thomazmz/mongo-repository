@@ -35,7 +35,7 @@
     "mongodb": "^5.2.0"
   },
   "dependencies": {
-    "@thomazmz/core-context": "^0.2.25",
+    "@thomazmz/core-context": "^0.2.27",
     "@thomazmz/core-utils": "^0.2.24"
   }
 }
