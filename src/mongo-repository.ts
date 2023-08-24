@@ -12,9 +12,12 @@ import {
   EntityProperties,
   EntityPropertiesPartial,
   RepositoryError,
-  arrayUtils,
   Repository,
 } from '@thomazmz/core-context'
+
+import { 
+  ArrayUtils
+} from '@thomazmz/core-utils'
 
 export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   constructor(
@@ -131,7 +134,7 @@ export class MongoRepository<E extends Entity<any>> implements Repository<E> {
   
       const insertedIds = Object.values(insertResponse.insertedIds)
   
-      return arrayUtils.zip(timestampedProperties, insertedIds, (documentWithoutId, objectId) => {
+      return ArrayUtils.merge(timestampedProperties, insertedIds, (documentWithoutId, objectId) => {
         if(!documentWithoutId || !objectId) {
           // TODO: improve error throwing
           throw new RepositoryError()
